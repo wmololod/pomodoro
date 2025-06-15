@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Помодоро PWA</title>
+  <title>Порядок бьет класс</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#d35400">
   <style>
@@ -20,7 +20,11 @@
     h1 {
       margin: 30px 0 10px 0;
       color: #d35400;
-      font-size: 2rem;
+      font-size: 2.2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-align: center;
+      text-shadow: 0 2px 8px #fff2e0;
     }
     nav {
       display: flex;
@@ -43,7 +47,7 @@
     }
     #main, #stats {
       width: 100%;
-      max-width: 350px;
+      max-width: 370px;
       display: none;
       flex-direction: column;
       align-items: center;
@@ -56,23 +60,71 @@
       margin: 30px 0 20px 0;
       color: #333;
       letter-spacing: 2px;
+      text-align: center;
     }
-    .buttons {
+    .range-group {
+      width: 100%;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .range-group label {
+      font-size: 1rem;
+      margin-bottom: 2px;
+      color: #555;
+    }
+    .range-group .range-value {
+      font-size: 1.1rem;
+      color: #d35400;
+      margin-left: 8px;
+      font-weight: bold;
+    }
+    .range-group input[type=range] {
+      width: 100%;
+      margin: 0;
+      accent-color: #d35400;
+    }
+    .big-btn {
+      width: 100%;
+      max-width: 320px;
+      font-size: 1.5rem;
+      padding: 22px 0;
+      margin: 18px 0 10px 0;
+      background: linear-gradient(90deg, #ffb347 0%, #ffcc80 100%);
+      color: #b03a2e;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      box-shadow: 0 4px 16px #ffb34744;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      animation: pulse 1.2s infinite alternate;
+    }
+    .big-btn:active {
+      transform: scale(0.97);
+      box-shadow: 0 2px 8px #ffb34744;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 4px 16px #ffb34744; }
+      100% { box-shadow: 0 8px 32px #ffb34788; }
+    }
+    .small-btns {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
-    button {
-      padding: 10px 20px;
-      font-size: 1.1rem;
-      border: none;
-      border-radius: 5px;
+    .small-btns button {
+      padding: 8px 18px;
+      font-size: 1rem;
+      border-radius: 6px;
       background: #d35400;
       color: #fff;
+      border: none;
       cursor: pointer;
       transition: background 0.2s;
     }
-    button:hover {
+    .small-btns button:hover {
       background: #e67e22;
     }
     .input-group {
@@ -98,7 +150,8 @@
     @media (max-width: 500px) {
       #timer { font-size: 2.5rem; }
       h1 { font-size: 1.3rem; }
-      .buttons button, nav button { font-size: 0.95rem; padding: 8px 10px; }
+      .big-btn { font-size: 1.1rem; padding: 14px 0; }
+      .small-btns button, nav button { font-size: 0.95rem; padding: 8px 10px; }
       #main, #stats { max-width: 98vw; }
     }
     .stat-table {
@@ -119,15 +172,23 @@
   </style>
 </head>
 <body>
-  <h1>Помодоро PWA</h1>
+  <h1>Порядок бьет класс</h1>
   <nav>
     <button id="tab-timer" class="active">Таймер</button>
     <button id="tab-stats">Статистика</button>
   </nav>
   <div id="main" class="active">
-    <div id="timer">25:00</div>
-    <div class="buttons">
-      <button id="start">Старт</button>
+    <div class="range-group">
+      <label for="work-range">Время работы: <span id="work-value" class="range-value">30</span> мин</label>
+      <input type="range" id="work-range" min="30" max="50" value="30">
+    </div>
+    <div class="range-group">
+      <label for="rest-range">Время отдыха: <span id="rest-value" class="range-value">10</span> мин</label>
+      <input type="range" id="rest-range" min="10" max="20" value="10">
+    </div>
+    <div id="timer">30:00</div>
+    <button id="start" class="big-btn">Еб*шь, Помидор!</button>
+    <div class="small-btns">
       <button id="pause">Пауза</button>
       <button id="reset">Сброс</button>
     </div>
@@ -146,6 +207,8 @@
       <tbody id="stat-body"></tbody>
     </table>
   </div>
+  <audio id="work-end-sound" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa4c3e.mp3"></audio>
+  <audio id="rest-end-sound" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa4c3e.mp3"></audio>
   <script>
     // PWA install
     if ('serviceWorker' in navigator) {
@@ -171,16 +234,23 @@
       renderStats();
     };
 
-    // Pomodoro timer
-    let duration = 25 * 60;
-    let timeLeft = duration;
+    // Pomodoro timer logic
+    let workDuration = 30 * 60;
+    let restDuration = 10 * 60;
+    let timeLeft = workDuration;
     let timerInterval = null;
     let isRunning = false;
-    let pomodoroCount = 0;
+    let isWork = true;
     const timerDisplay = document.getElementById('timer');
     const startBtn = document.getElementById('start');
     const pauseBtn = document.getElementById('pause');
     const resetBtn = document.getElementById('reset');
+    const workRange = document.getElementById('work-range');
+    const restRange = document.getElementById('rest-range');
+    const workValue = document.getElementById('work-value');
+    const restValue = document.getElementById('rest-value');
+    const workEndSound = document.getElementById('work-end-sound');
+    const restEndSound = document.getElementById('rest-end-sound');
 
     function updateDisplay() {
       const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
@@ -210,6 +280,7 @@
     function startTimer() {
       if (isRunning) return;
       isRunning = true;
+      startBtn.disabled = true;
       timerInterval = setInterval(() => {
         if (timeLeft > 0) {
           timeLeft--;
@@ -217,8 +288,22 @@
         } else {
           clearInterval(timerInterval);
           isRunning = false;
-          saveStats();
-          alert('Время вышло! Помодоро засчитан.');
+          if (isWork) {
+            saveStats();
+            workEndSound.play();
+            isWork = false;
+            timeLeft = restDuration;
+            updateDisplay();
+            setTimeout(() => {
+              startTimer(); // Автоматически запускаем отдых
+            }, 1000);
+          } else {
+            restEndSound.play();
+            startBtn.disabled = false;
+            isWork = true;
+            timeLeft = workDuration;
+            updateDisplay();
+          }
         }
       }, 1000);
     }
@@ -227,19 +312,39 @@
       if (!isRunning) return;
       clearInterval(timerInterval);
       isRunning = false;
+      startBtn.disabled = false;
     }
 
     function resetTimer() {
       clearInterval(timerInterval);
       isRunning = false;
-      timeLeft = duration;
+      isWork = true;
+      timeLeft = workDuration;
       updateDisplay();
+      startBtn.disabled = false;
     }
 
     startBtn.addEventListener('click', startTimer);
     pauseBtn.addEventListener('click', pauseTimer);
     resetBtn.addEventListener('click', resetTimer);
-    updateDisplay();
+
+    // Range controls
+    workRange.addEventListener('input', () => {
+      workValue.textContent = workRange.value;
+      workDuration = workRange.value * 60;
+      if (isWork) {
+        timeLeft = workDuration;
+        updateDisplay();
+      }
+    });
+    restRange.addEventListener('input', () => {
+      restValue.textContent = restRange.value;
+      restDuration = restRange.value * 60;
+      if (!isWork) {
+        timeLeft = restDuration;
+        updateDisplay();
+      }
+    });
 
     // Telegram ID
     const tgidInput = document.getElementById('tgid');
@@ -266,6 +371,11 @@
       deferredPrompt = e;
       // Можно добавить кнопку для установки PWA
     });
+
+    // Инициализация
+    updateDisplay();
+    workValue.textContent = workRange.value;
+    restValue.textContent = restRange.value;
   </script>
 </body>
-</html> 
+</html>
