@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Помодоро PWA</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#d35400">
+  <style>
+    body {
+      background: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      margin: 30px 0 10px 0;
+      color: #d35400;
+      font-size: 2rem;
+    }
+    nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    nav button {
+      background: #fff;
+      border: 1px solid #d35400;
+      color: #d35400;
+      padding: 8px 18px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    nav button.active, nav button:hover {
+      background: #d35400;
+      color: #fff;
+    }
+    #main, #stats {
+      width: 100%;
+      max-width: 350px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+    #main.active, #stats.active {
+      display: flex;
+    }
+    #timer {
+      font-size: 4rem;
+      margin: 30px 0 20px 0;
+      color: #333;
+      letter-spacing: 2px;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 5px;
+      background: #d35400;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #e67e22;
+    }
+    .input-group {
+      margin: 15px 0 10px 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .input-group label {
+      font-size: 0.95rem;
+      margin-bottom: 3px;
+      color: #555;
+    }
+    .input-group input {
+      padding: 7px 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    @media (max-width: 500px) {
+      #timer { font-size: 2.5rem; }
+      h1 { font-size: 1.3rem; }
+      .buttons button, nav button { font-size: 0.95rem; padding: 8px 10px; }
+      #main, #stats { max-width: 98vw; }
+    }
+    .stat-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .stat-table th, .stat-table td {
+      border: 1px solid #ddd;
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 0.98rem;
+    }
+    .stat-table th {
+      background: #f7c59f;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Помодоро PWA</h1>
+  <nav>
+    <button id="tab-timer" class="active">Таймер</button>
+    <button id="tab-stats">Статистика</button>
+  </nav>
+  <div id="main" class="active">
+    <div id="timer">25:00</div>
+    <div class="buttons">
+      <button id="start">Старт</button>
+      <button id="pause">Пауза</button>
+      <button id="reset">Сброс</button>
+    </div>
+    <div class="input-group">
+      <label for="tgid">Ваш Telegram ID (один раз):</label>
+      <input type="text" id="tgid" placeholder="Введите Telegram ID">
+    </div>
+    <button id="save-tgid" style="margin-bottom:10px;">Сохранить ID</button>
+    <div id="tgid-status" style="font-size:0.95rem;color:#27ae60;"></div>
+  </div>
+  <div id="stats">
+    <table class="stat-table">
+      <thead>
+        <tr><th>День</th><th>Помодоро</th></tr>
+      </thead>
+      <tbody id="stat-body"></tbody>
+    </table>
+  </div>
+  <script>
+    // PWA install
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    // Tabs
+    const tabTimer = document.getElementById('tab-timer');
+    const tabStats = document.getElementById('tab-stats');
+    const main = document.getElementById('main');
+    const stats = document.getElementById('stats');
+    tabTimer.onclick = () => {
+      tabTimer.classList.add('active');
+      tabStats.classList.remove('active');
+      main.classList.add('active');
+      stats.classList.remove('active');
+    };
+    tabStats.onclick = () => {
+      tabStats.classList.add('active');
+      tabTimer.classList.remove('active');
+      stats.classList.add('active');
+      main.classList.remove('active');
+      renderStats();
+    };
+
+    // Pomodoro timer
+    let duration = 25 * 60;
+    let timeLeft = duration;
+    let timerInterval = null;
+    let isRunning = false;
+    let pomodoroCount = 0;
+    const timerDisplay = document.getElementById('timer');
+    const startBtn = document.getElementById('start');
+    const pauseBtn = document.getElementById('pause');
+    const resetBtn = document.getElementById('reset');
+
+    function updateDisplay() {
+      const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+      const seconds = (timeLeft % 60).toString().padStart(2, '0');
+      timerDisplay.textContent = `${minutes}:${seconds}`;
+    }
+
+    function saveStats() {
+      const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+      const today = new Date();
+      const day = today.getDay(); // 0 - Sunday, 1 - Monday, ...
+      stats[day] = (stats[day] || 0) + 1;
+      localStorage.setItem('pomodoroStats', JSON.stringify(stats));
+    }
+
+    function renderStats() {
+      const statBody = document.getElementById('stat-body');
+      const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+      const days = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+      statBody.innerHTML = '';
+      for (let i = 1; i <= 7; i++) {
+        const dayIdx = i % 7;
+        statBody.innerHTML += `<tr><td>${days[dayIdx]}</td><td>${stats[dayIdx] || 0}</td></tr>`;
+      }
+    }
+
+    function startTimer() {
+      if (isRunning) return;
+      isRunning = true;
+      timerInterval = setInterval(() => {
+        if (timeLeft > 0) {
+          timeLeft--;
+          updateDisplay();
+        } else {
+          clearInterval(timerInterval);
+          isRunning = false;
+          saveStats();
+          alert('Время вышло! Помодоро засчитан.');
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      if (!isRunning) return;
+      clearInterval(timerInterval);
+      isRunning = false;
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      timeLeft = duration;
+      updateDisplay();
+    }
+
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+    updateDisplay();
+
+    // Telegram ID
+    const tgidInput = document.getElementById('tgid');
+    const saveTgBtn = document.getElementById('save-tgid');
+    const tgidStatus = document.getElementById('tgid-status');
+    tgidInput.value = localStorage.getItem('tgid') || '';
+    saveTgBtn.onclick = () => {
+      const val = tgidInput.value.trim();
+      if (/^\d+$/.test(val)) {
+        localStorage.setItem('tgid', val);
+        tgidStatus.textContent = 'ID сохранён!';
+        tgidStatus.style.color = '#27ae60';
+      } else {
+        tgidStatus.textContent = 'Введите корректный числовой Telegram ID!';
+        tgidStatus.style.color = '#c0392b';
+      }
+    };
+    if (tgidInput.value) tgidStatus.textContent = 'ID сохранён!';
+
+    // PWA install prompt (опционально)
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // Можно добавить кнопку для установки PWA
+    });
+  </script>
+</body>
+</html> 
