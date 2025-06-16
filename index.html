@@ -361,7 +361,7 @@
     }
     saveTgBtn.onclick = () => {
       const val = tgidInput.value.trim();
-      if (/^\\d+$/.test(val)) {
+      if (/^\d+$/.test(val)) {
         localStorage.setItem('tgid', val);
         tgidStatus.textContent = 'ID сохранён!';
         tgidStatus.style.color = '#27ae60';
