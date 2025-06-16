@@ -192,7 +192,7 @@
       <button id="pause">Пауза</button>
       <button id="reset">Сброс</button>
     </div>
-    <div class="input-group">
+    <div class="input-group" id="tgid-group">
       <label for="tgid">Ваш Telegram ID (один раз):</label>
       <input type="text" id="tgid" placeholder="Введите Telegram ID">
     </div>
@@ -324,7 +324,10 @@
       startBtn.disabled = false;
     }
 
-    startBtn.addEventListener('click', startTimer);
+    startBtn.addEventListener('click', () => {
+      if (navigator.vibrate) navigator.vibrate(500);
+      startTimer();
+    });
     pauseBtn.addEventListener('click', pauseTimer);
     resetBtn.addEventListener('click', resetTimer);
 
@@ -350,19 +353,34 @@
     const tgidInput = document.getElementById('tgid');
     const saveTgBtn = document.getElementById('save-tgid');
     const tgidStatus = document.getElementById('tgid-status');
+    const tgidGroup = document.getElementById('tgid-group');
     tgidInput.value = localStorage.getItem('tgid') || '';
+    function hideTgInput() {
+      tgidGroup.style.display = 'none';
+      saveTgBtn.style.display = 'none';
+    }
     saveTgBtn.onclick = () => {
       const val = tgidInput.value.trim();
-      if (/^\d+$/.test(val)) {
+      if (/^\\d+$/.test(val)) {
         localStorage.setItem('tgid', val);
         tgidStatus.textContent = 'ID сохранён!';
         tgidStatus.style.color = '#27ae60';
+        hideTgInput();
+        // Отправка запроса на сервер для уведомления в Telegram
+        fetch('https://ВАШ_БЭКЕНД_АДРЕС/notify_id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tgid: val })
+        });
       } else {
         tgidStatus.textContent = 'Введите корректный числовой Telegram ID!';
         tgidStatus.style.color = '#c0392b';
       }
     };
-    if (tgidInput.value) tgidStatus.textContent = 'ID сохранён!';
+    if (tgidInput.value) {
+      tgidStatus.textContent = 'ID сохранён!';
+      hideTgInput();
+    }
 
     // PWA install prompt (опционально)
     let deferredPrompt;
