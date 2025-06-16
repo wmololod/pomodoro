@@ -361,6 +361,7 @@
     }
     saveTgBtn.onclick = () => {
       const val = tgidInput.value.trim();
+      console.log('Введённое значение:', val);
       if (/^\d+$/.test(val)) {
         localStorage.setItem('tgid', val);
         tgidStatus.textContent = 'ID сохранён!';
