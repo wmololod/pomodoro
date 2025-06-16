@@ -367,7 +367,7 @@
         tgidStatus.style.color = '#27ae60';
         hideTgInput();
         // Отправка запроса на сервер для уведомления в Telegram
-        fetch('https://ВАШ_БЭКЕНД_АДРЕС/notify_id', {
+        fetch('https://pomodoro-backend-hdn6.onrender.com', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tgid: val })
