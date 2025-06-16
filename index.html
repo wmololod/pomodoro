@@ -409,6 +409,8 @@
       let state = loadTimerState();
       if (state) {
         isWork = state.isWork;
+        workDuration = state.isWork ? state.duration : workDuration;
+        restDuration = !state.isWork ? state.duration : restDuration;
         if (state.paused) {
           timeLeft = state.timeLeft;
           updateDisplay();
@@ -419,7 +421,6 @@
           if (timeLeft > 0) {
             startTimer();
           } else {
-            // Если время вышло, сбрасываем
             resetTimer();
           }
         }
