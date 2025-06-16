@@ -388,6 +388,7 @@
     workRange.addEventListener('input', () => {
       workValue.textContent = workRange.value;
       workDuration = workRange.value * 60;
+      localStorage.setItem('workDuration', workDuration);
       if (isWork) {
         timeLeft = workDuration;
         updateDisplay();
@@ -397,6 +398,7 @@
     restRange.addEventListener('input', () => {
       restValue.textContent = restRange.value;
       restDuration = restRange.value * 60;
+      localStorage.setItem('restDuration', restDuration);
       if (!isWork) {
         timeLeft = restDuration;
         updateDisplay();
@@ -406,11 +408,16 @@
 
     // Восстановление таймера при загрузке страницы
     window.addEventListener('load', () => {
+      workDuration = parseInt(localStorage.getItem('workDuration')) || 30 * 60;
+      restDuration = parseInt(localStorage.getItem('restDuration')) || 10 * 60;
+      workRange.value = workDuration / 60;
+      restRange.value = restDuration / 60;
+      workValue.textContent = workRange.value;
+      restValue.textContent = restRange.value;
+
       let state = loadTimerState();
       if (state) {
         isWork = state.isWork;
-        workDuration = state.isWork ? state.duration : workDuration;
-        restDuration = !state.isWork ? state.duration : restDuration;
         if (state.paused) {
           timeLeft = state.timeLeft;
           updateDisplay();
@@ -425,7 +432,7 @@
           }
         }
       } else {
-        timeLeft = workDuration;
+        timeLeft = isWork ? workDuration : restDuration;
         updateDisplay();
       }
     });
