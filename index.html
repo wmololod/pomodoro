@@ -252,6 +252,16 @@
     const workEndSound = document.getElementById('work-end-sound');
     const restEndSound = document.getElementById('rest-end-sound');
 
+    function saveTimerState(state) {
+      localStorage.setItem('pomodoroTimerState', JSON.stringify(state));
+    }
+    function loadTimerState() {
+      return JSON.parse(localStorage.getItem('pomodoroTimerState') || 'null');
+    }
+    function clearTimerState() {
+      localStorage.removeItem('pomodoroTimerState');
+    }
+
     function updateDisplay() {
       const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
       const seconds = (timeLeft % 60).toString().padStart(2, '0');
@@ -281,9 +291,21 @@
       if (isRunning) return;
       isRunning = true;
       startBtn.disabled = true;
+      const now = Date.now();
+      let state = {
+        isWork,
+        start: now,
+        duration: isWork ? workDuration : restDuration,
+        paused: false,
+        pauseTime: null,
+        timeLeft: timeLeft
+      };
+      saveTimerState(state);
       timerInterval = setInterval(() => {
+        const currentState = loadTimerState();
+        let elapsed = Math.floor((Date.now() - currentState.start) / 1000);
+        timeLeft = currentState.duration - elapsed;
         if (timeLeft > 0) {
-          timeLeft--;
           updateDisplay();
         } else {
           clearInterval(timerInterval);
@@ -294,6 +316,14 @@
             isWork = false;
             timeLeft = restDuration;
             updateDisplay();
+            saveTimerState({
+              isWork,
+              start: Date.now(),
+              duration: restDuration,
+              paused: false,
+              pauseTime: null,
+              timeLeft: restDuration
+            });
             setTimeout(() => {
               startTimer(); // Автоматически запускаем отдых
             }, 1000);
@@ -303,6 +333,7 @@
             isWork = true;
             timeLeft = workDuration;
             updateDisplay();
+            clearTimerState();
           }
         }
       }, 1000);
@@ -313,6 +344,18 @@
       clearInterval(timerInterval);
       isRunning = false;
       startBtn.disabled = false;
+      // Сохраняем состояние паузы
+      let state = loadTimerState();
+      let elapsed = Math.floor((Date.now() - state.start) / 1000);
+      timeLeft = state.duration - elapsed;
+      saveTimerState({
+        isWork,
+        start: state.start,
+        duration: state.duration,
+        paused: true,
+        pauseTime: Date.now(),
+        timeLeft: timeLeft
+      });
     }
 
     function resetTimer() {
@@ -322,10 +365,20 @@
       timeLeft = workDuration;
       updateDisplay();
       startBtn.disabled = false;
+      clearTimerState();
     }
 
     startBtn.addEventListener('click', () => {
       if (navigator.vibrate) navigator.vibrate(500);
+      // Если таймер был на паузе, пересчитаем время
+      let state = loadTimerState();
+      if (state && state.paused) {
+        // Сдвигаем старт на время паузы
+        let pauseDuration = Date.now() - state.pauseTime;
+        state.start += pauseDuration;
+        state.paused = false;
+        saveTimerState(state);
+      }
       startTimer();
     });
     pauseBtn.addEventListener('click', pauseTimer);
@@ -338,6 +391,7 @@
       if (isWork) {
         timeLeft = workDuration;
         updateDisplay();
+        clearTimerState();
       }
     });
     restRange.addEventListener('input', () => {
@@ -345,6 +399,32 @@
       restDuration = restRange.value * 60;
       if (!isWork) {
         timeLeft = restDuration;
+        updateDisplay();
+        clearTimerState();
+      }
+    });
+
+    // Восстановление таймера при загрузке страницы
+    window.addEventListener('load', () => {
+      let state = loadTimerState();
+      if (state) {
+        isWork = state.isWork;
+        if (state.paused) {
+          timeLeft = state.timeLeft;
+          updateDisplay();
+          startBtn.disabled = false;
+        } else {
+          let elapsed = Math.floor((Date.now() - state.start) / 1000);
+          timeLeft = state.duration - elapsed;
+          if (timeLeft > 0) {
+            startTimer();
+          } else {
+            // Если время вышло, сбрасываем
+            resetTimer();
+          }
+        }
+      } else {
+        timeLeft = workDuration;
         updateDisplay();
       }
     });
@@ -361,7 +441,6 @@
     }
     saveTgBtn.onclick = () => {
       const val = tgidInput.value.trim();
-      console.log('Введённое значение:', val);
       if (/^\d+$/.test(val)) {
         localStorage.setItem('tgid', val);
         tgidStatus.textContent = 'ID сохранён!';
@@ -397,4 +476,4 @@
     restValue.textContent = restRange.value;
   </script>
 </body>
-</html>
+</html> 
