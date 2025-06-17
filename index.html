@@ -369,24 +369,30 @@ function saveStats() {
       }, 1000);
     }
 
-    function pauseTimer() {
-      if (!isRunning) return;
-      clearInterval(timerInterval);
-      isRunning = false;
-      startBtn.disabled = false;
-      // Сохраняем состояние паузы
-      let state = loadTimerState();
-      let elapsed = Math.floor((Date.now() - state.start) / 1000);
-      timeLeft = state.duration - elapsed;
-      saveTimerState({
-        isWork,
-        start: state.start,
-        duration: state.duration,
-        paused: true,
-        pauseTime: Date.now(),
-        timeLeft: timeLeft
-      });
-    }
+function pauseTimer() {
+  if (!isRunning) {
+    // Если таймер на паузе, возобновляем его
+    startTimer();
+    pauseBtn.textContent = 'Пауза';
+  } else {
+    // Если таймер работает, ставим на паузу
+    clearInterval(timerInterval);
+    isRunning = false;
+    startBtn.disabled = false;
+    let state = loadTimerState();
+    let elapsed = Math.floor((Date.now() - state.start) / 1000);
+    timeLeft = state.duration - elapsed;
+    saveTimerState({
+      isWork,
+      start: state.start,
+      duration: state.duration,
+      paused: true,
+      pauseTime: Date.now(),
+      timeLeft: timeLeft
+    });
+    pauseBtn.textContent = 'Ехало';
+  }
+}
 
     function resetTimer() {
       clearInterval(timerInterval);
