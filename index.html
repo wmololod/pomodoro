@@ -268,13 +268,33 @@
       timerDisplay.textContent = `${minutes}:${seconds}`;
     }
 
-    function saveStats() {
-      const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
-      const today = new Date();
-      const day = today.getDay(); // 0 - Sunday, 1 - Monday, ...
-      stats[day] = (stats[day] || 0) + 1;
-      localStorage.setItem('pomodoroStats', JSON.stringify(stats));
+function saveStats() {
+  const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+  const today = new Date();
+  const day = today.toISOString().split('T')[0]; // Получаем сегодняшнюю дату в формате YYYY-MM-DD
+  stats[day] = (stats[day] || 0) + 1;
+  localStorage.setItem('pomodoroStats', JSON.stringify(stats));
+
+  // Отправка данных на сервер
+  fetch('https://pomodoro-backend-hdn6.onrender.com', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ date: day, count: stats[day] }),
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
     }
+    return response.json();
+  })
+  .then(data => console.log('Success:', data))
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Произошла ошибка при отправке данных на сервер. Пожалуйста, попробуйте позже.');
+  });
+}
 
     function renderStats() {
       const statBody = document.getElementById('stat-body');
