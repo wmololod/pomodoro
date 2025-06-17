@@ -312,7 +312,12 @@
           isRunning = false;
           if (isWork) {
             saveStats();
-            workEndSound.play();
+            console.log("Work session ended. Attempting to play sound.");
+            workEndSound.play().then(() => {
+              console.log("Work end sound played successfully.");
+            }).catch(error => {
+              console.error("Error playing work end sound:", error);
+            });
             isWork = false;
             timeLeft = restDuration;
             updateDisplay();
@@ -328,7 +333,12 @@
               startTimer(); // Автоматически запускаем отдых
             }, 1000);
           } else {
-            restEndSound.play();
+            console.log("Rest session ended. Attempting to play sound.");
+            restEndSound.play().then(() => {
+              console.log("Rest end sound played successfully.");
+            }).catch(error => {
+              console.error("Error playing rest end sound:", error);
+            });
             startBtn.disabled = false;
             isWork = true;
             timeLeft = workDuration;
@@ -404,6 +414,23 @@
         updateDisplay();
         clearTimerState();
       }
+    });
+
+    // Проверка загрузки аудиофайлов
+    workEndSound.addEventListener('canplaythrough', () => {
+      console.log("Work end sound loaded successfully.");
+    });
+
+    restEndSound.addEventListener('canplaythrough', () => {
+      console.log("Rest end sound loaded successfully.");
+    });
+
+    workEndSound.addEventListener('error', (e) => {
+      console.error("Error loading work end sound:", e);
+    });
+
+    restEndSound.addEventListener('error', (e) => {
+      console.error("Error loading rest end sound:", e);
     });
 
     // Восстановление таймера при загрузке страницы
@@ -484,4 +511,4 @@
     restValue.textContent = restRange.value;
   </script>
 </body>
-</html> 
+</html>
