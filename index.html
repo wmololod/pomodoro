@@ -372,6 +372,14 @@ function saveStats() {
 function pauseTimer() {
   if (!isRunning) {
     // Если таймер на паузе, возобновляем его
+    const state = loadTimerState();
+    if (state && state.paused) {
+      // Сдвигаем старт на время паузы
+      let pauseDuration = Date.now() - state.pauseTime;
+      state.start += pauseDuration;
+      state.paused = false;
+      saveTimerState(state);
+    }
     startTimer();
     pauseBtn.textContent = 'Пауза';
   } else {
