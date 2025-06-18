@@ -382,8 +382,8 @@ function pauseTimer() {
       const pauseDuration = Date.now() - state.pauseTime;
       state.start += pauseDuration;
       state.paused = false;
-      saveTimerState(state);
       timeLeft = state.timeLeft; // Восстанавливаем оставшееся время
+      saveTimerState(state);
     }
     startTimer();
     pauseBtn.textContent = 'Пауза';
