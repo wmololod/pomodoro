@@ -241,6 +241,9 @@
     let timerInterval = null;
     let isRunning = false;
     let isWork = true;
+    let startTime = 0;
+    let remainingTime = workDuration;
+
     const timerDisplay = document.getElementById('timer');
     const startBtn = document.getElementById('start');
     const pauseBtn = document.getElementById('pause');
@@ -252,227 +255,139 @@
     const workEndSound = document.getElementById('work-end-sound');
     const restEndSound = document.getElementById('rest-end-sound');
 
-    function saveTimerState(state) {
-      localStorage.setItem('pomodoroTimerState', JSON.stringify(state));
-    }
-    function loadTimerState() {
-      return JSON.parse(localStorage.getItem('pomodoroTimerState') || 'null');
-    }
-    function clearTimerState() {
-      localStorage.removeItem('pomodoroTimerState');
-    }
-
     function updateDisplay() {
-      const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-      const seconds = (timeLeft % 60).toString().padStart(2, '0');
+      const minutes = Math.floor(remainingTime / 60).toString().padStart(2, '0');
+      const seconds = (remainingTime % 60).toString().padStart(2, '0');
       timerDisplay.textContent = `${minutes}:${seconds}`;
     }
 
-function saveStats() {
-  const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
-  const today = new Date();
-  const day = today.toISOString().split('T')[0]; // Получаем сегодняшнюю дату в формате YYYY-MM-DD
-  stats[day] = (stats[day] || 0) + 1;
-  localStorage.setItem('pomodoroStats', JSON.stringify(stats));
+    function saveStats() {
+      const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+      const today = new Date();
+      const day = today.toISOString().split('T')[0];
+      stats[day] = (stats[day] || 0) + 1;
+      localStorage.setItem('pomodoroStats', JSON.stringify(stats));
 
-  // Отправка данных на сервер
-  fetch('https://pomodoro-backend-hdn6.onrender.com', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ date: day, count: stats[day] }),
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
+      fetch('https://pomodoro-backend-hdn6.onrender.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date: day, count: stats[day] }),
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => console.log('Success:', data))
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при отправке данных на сервер. Пожалуйста, попробуйте позже.');
+      });
     }
-    return response.json();
-  })
-  .then(data => console.log('Success:', data))
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Произошла ошибка при отправке данных на сервер. Пожалуйста, попробуйте позже.');
-  });
-}
 
     function renderStats() {
       const statBody = document.getElementById('stat-body');
       const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
-      const days = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+      const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
       statBody.innerHTML = '';
-      for (let i = 1; i <= 7; i++) {
-        const dayIdx = i % 7;
+      for (let i = 0; i < 7; i++) {
+        const dayIdx = (i + 1) % 7;
         statBody.innerHTML += `<tr><td>${days[dayIdx]}</td><td>${stats[dayIdx] || 0}</td></tr>`;
       }
     }
 
-function startTimer() {
-  if (isRunning) return;
-  isRunning = true;
-  startBtn.disabled = true;
-  const now = Date.now();
-  let state = {
-    isWork,
-    start: now,
-    duration: isWork ? workDuration : restDuration,
-    paused: false,
-    pauseTime: null,
-    timeLeft: timeLeft
-  };
-  saveTimerState(state);
-  timerInterval = setInterval(() => {
-    const currentState = loadTimerState();
-    let elapsed = Math.floor((Date.now() - currentState.start) / 1000);
-    timeLeft = currentState.timeLeft - elapsed;
-    if (timeLeft > 0) {
-      updateDisplay();
-    } else {
-      clearInterval(timerInterval);
-      isRunning = false;
-      if (isWork) {
-        saveStats();
-        workEndSound.play().then(() => {
-          console.log("Work end sound played successfully.");
-        }).catch(error => {
-          console.error("Error playing work end sound:", error);
-        });
-        isWork = false;
-        timeLeft = restDuration;
-        updateDisplay();
-        saveTimerState({
-          isWork,
-          start: Date.now(),
-          duration: restDuration,
-          paused: false,
-          pauseTime: null,
-          timeLeft: restDuration
-        });
-        setTimeout(() => {
-          startTimer(); // Автоматически запускаем отдых
-        }, 1000);
-      } else {
-        restEndSound.play().then(() => {
-          console.log("Rest end sound played successfully.");
-        }).catch(error => {
-          console.error("Error playing rest end sound:", error);
-        });
+    function startTimer() {
+      if (isRunning) return;
+      isRunning = true;
+      startBtn.disabled = true;
+      startTime = Date.now();
+
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        remainingTime = timeLeft - elapsed;
+
+        if (remainingTime > 0) {
+          updateDisplay();
+        } else {
+          clearInterval(timerInterval);
+          isRunning = false;
+          if (isWork) {
+            saveStats();
+            workEndSound.play().catch(error => console.error("Error playing work end sound:", error));
+            isWork = false;
+            timeLeft = restDuration;
+            remainingTime = restDuration;
+            updateDisplay();
+            setTimeout(() => startTimer(), 1000);
+          } else {
+            restEndSound.play().catch(error => console.error("Error playing rest end sound:", error));
+            startBtn.disabled = false;
+            isWork = true;
+            timeLeft = workDuration;
+            remainingTime = workDuration;
+            updateDisplay();
+          }
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      if (isRunning) {
+        clearInterval(timerInterval);
+        isRunning = false;
         startBtn.disabled = false;
-        isWork = true;
-        timeLeft = workDuration;
-        updateDisplay();
-        clearTimerState();
+        timeLeft = remainingTime;
+        pauseBtn.textContent = 'Ехало';
+      } else {
+        startTime = Date.now();
+        startTimer();
+        pauseBtn.textContent = 'Пауза';
       }
     }
-  }, 1000);
-}
-
-/**
- * Pause or resume the timer.
- * This function checks the current state of the timer and either pauses it or resumes it.
- * It also updates the button text to reflect the current state.
- */
-    
-function pauseTimer() {
-  if (!isRunning) {
-    // Если таймер на паузе, возобновляем его
-    const state = loadTimerState();
-    if (state && state.paused) {
-      // Сдвигаем старт на время паузы
-      const pauseDuration = Date.now() - state.pauseTime;
-      state.start += pauseDuration;
-      state.paused = false;
-      timeLeft = state.timeLeft; // Восстанавливаем оставшееся время
-      saveTimerState(state);
-    }
-    startTimer();
-    pauseBtn.textContent = 'Пауза';
-  } else {
-    // Если таймер работает, ставим на паузу
-    clearInterval(timerInterval);
-    isRunning = false;
-    startBtn.disabled = false;
-    const state = loadTimerState();
-    const elapsed = Math.floor((Date.now() - state.start) / 1000);
-    timeLeft = state.duration - elapsed;
-    saveTimerState({
-      isWork,
-      start: state.start,
-      duration: state.duration,
-      paused: true,
-      pauseTime: Date.now(),
-      timeLeft: timeLeft
-    });
-    pauseBtn.textContent = 'Ехало';
-  }
-}
 
     function resetTimer() {
       clearInterval(timerInterval);
       isRunning = false;
       isWork = true;
       timeLeft = workDuration;
+      remainingTime = workDuration;
       updateDisplay();
       startBtn.disabled = false;
-      clearTimerState();
     }
 
     startBtn.addEventListener('click', () => {
       if (navigator.vibrate) navigator.vibrate(500);
-      // Если таймер был на паузе, пересчитаем время
-      let state = loadTimerState();
-      if (state && state.paused) {
-        // Сдвигаем старт на время паузы
-        let pauseDuration = Date.now() - state.pauseTime;
-        state.start += pauseDuration;
-        state.paused = false;
-        saveTimerState(state);
-      }
       startTimer();
     });
+
     pauseBtn.addEventListener('click', pauseTimer);
     resetBtn.addEventListener('click', resetTimer);
 
-    // Range controls
     workRange.addEventListener('input', () => {
       workValue.textContent = workRange.value;
       workDuration = workRange.value * 60;
       localStorage.setItem('workDuration', workDuration);
       if (isWork) {
         timeLeft = workDuration;
+        remainingTime = workDuration;
         updateDisplay();
-        clearTimerState();
       }
     });
+
     restRange.addEventListener('input', () => {
       restValue.textContent = restRange.value;
       restDuration = restRange.value * 60;
       localStorage.setItem('restDuration', restDuration);
       if (!isWork) {
         timeLeft = restDuration;
+        remainingTime = restDuration;
         updateDisplay();
-        clearTimerState();
       }
     });
 
-    // Проверка загрузки аудиофайлов
-    workEndSound.addEventListener('canplaythrough', () => {
-      console.log("Work end sound loaded successfully.");
-    });
-
-    restEndSound.addEventListener('canplaythrough', () => {
-      console.log("Rest end sound loaded successfully.");
-    });
-
-    workEndSound.addEventListener('error', (e) => {
-      console.error("Error loading work end sound:", e);
-    });
-
-    restEndSound.addEventListener('error', (e) => {
-      console.error("Error loading rest end sound:", e);
-    });
-
-    // Восстановление таймера при загрузке страницы
     window.addEventListener('load', () => {
       workDuration = parseInt(localStorage.getItem('workDuration')) || 30 * 60;
       restDuration = parseInt(localStorage.getItem('restDuration')) || 10 * 60;
@@ -480,27 +395,9 @@ function pauseTimer() {
       restRange.value = restDuration / 60;
       workValue.textContent = workRange.value;
       restValue.textContent = restRange.value;
-
-      let state = loadTimerState();
-      if (state) {
-        isWork = state.isWork;
-        if (state.paused) {
-          timeLeft = state.timeLeft;
-          updateDisplay();
-          startBtn.disabled = false;
-        } else {
-          let elapsed = Math.floor((Date.now() - state.start) / 1000);
-          timeLeft = state.duration - elapsed;
-          if (timeLeft > 0) {
-            startTimer();
-          } else {
-            resetTimer();
-          }
-        }
-      } else {
-        timeLeft = isWork ? workDuration : restDuration;
-        updateDisplay();
-      }
+      timeLeft = isWork ? workDuration : restDuration;
+      remainingTime = timeLeft;
+      updateDisplay();
     });
 
     // Telegram ID
@@ -520,7 +417,6 @@ function pauseTimer() {
         tgidStatus.textContent = 'ID сохранён!';
         tgidStatus.style.color = '#27ae60';
         hideTgInput();
-        // Отправка запроса на сервер для уведомления в Telegram
         fetch('https://pomodoro-backend-hdn6.onrender.com', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -535,14 +431,6 @@ function pauseTimer() {
       tgidStatus.textContent = 'ID сохранён!';
       hideTgInput();
     }
-
-    // PWA install prompt (опционально)
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      // Можно добавить кнопку для установки PWA
-    });
 
     // Инициализация
     updateDisplay();
