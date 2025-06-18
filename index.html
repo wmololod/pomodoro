@@ -237,6 +237,7 @@
     let isWork = true;
     let startTime = 0;
     let remainingTime = workDuration;
+    let rangesDisabled = false;
     const CHAT_ID = '6045736248'; // Прописываем Telegram ID напрямую в коде
 
     const timerDisplay = document.getElementById('timer');
@@ -263,7 +264,6 @@
       stats[day] = (stats[day] || 0) + 1;
       localStorage.setItem('pomodoroStats', JSON.stringify(stats));
 
-      // Отправка данных на сервер
       fetch('https://pomodoro-backend-hdn6.onrender.com/save-pomodoro', {
         method: 'POST',
         headers: {
@@ -299,6 +299,9 @@
       if (isRunning) return;
       isRunning = true;
       startBtn.disabled = true;
+      rangesDisabled = true;
+      workRange.disabled = true;
+      restRange.disabled = true;
       startTime = Date.now();
 
       timerInterval = setInterval(() => {
@@ -317,13 +320,21 @@
             timeLeft = restDuration;
             remainingTime = restDuration;
             updateDisplay();
-            setTimeout(() => startTimer(), 1000);
+            setTimeout(() => {
+              workRange.disabled = false;
+              restRange.disabled = false;
+              rangesDisabled = false;
+              startTimer();
+            }, 1000);
           } else {
             restEndSound.play().catch(error => console.error("Error playing rest end sound:", error));
             startBtn.disabled = false;
             isWork = true;
             timeLeft = workDuration;
             remainingTime = workDuration;
+            workRange.disabled = false;
+            restRange.disabled = false;
+            rangesDisabled = false;
             updateDisplay();
           }
         }
@@ -352,6 +363,9 @@
       remainingTime = workDuration;
       updateDisplay();
       startBtn.disabled = false;
+      workRange.disabled = false;
+      restRange.disabled = false;
+      rangesDisabled = false;
     }
 
     startBtn.addEventListener('click', () => {
@@ -363,22 +377,26 @@
     resetBtn.addEventListener('click', resetTimer);
 
     workRange.addEventListener('input', () => {
-      workValue.textContent = workRange.value;
-      workDuration = workRange.value * 60;
-      if (isWork) {
-        timeLeft = workDuration;
-        remainingTime = workDuration;
-        updateDisplay();
+      if (!rangesDisabled) {
+        workValue.textContent = workRange.value;
+        workDuration = workRange.value * 60;
+        if (isWork) {
+          timeLeft = workDuration;
+          remainingTime = workDuration;
+          updateDisplay();
+        }
       }
     });
 
     restRange.addEventListener('input', () => {
-      restValue.textContent = restRange.value;
-      restDuration = restRange.value * 60;
-      if (!isWork) {
-        timeLeft = restDuration;
-        remainingTime = restDuration;
-        updateDisplay();
+      if (!rangesDisabled) {
+        restValue.textContent = restRange.value;
+        restDuration = restRange.value * 60;
+        if (!isWork) {
+          timeLeft = restDuration;
+          remainingTime = restDuration;
+          updateDisplay();
+        }
       }
     });
 
