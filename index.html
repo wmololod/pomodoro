@@ -218,7 +218,7 @@
     let startTime = 0;
     let remainingTime = workDuration;
     let rangesDisabled = false;
-    const CHAT_ID = '6045736248'; // Прописываем Telegram ID напрямую в коде
+    const CHAT_ID = '6045736248';
 
     const timerDisplay = document.getElementById('timer');
     const startBtn = document.getElementById('start');
@@ -274,6 +274,23 @@
       }
     }
 
+    function saveTimerState() {
+      localStorage.setItem('pomodoroTimerState', JSON.stringify({
+        isWork,
+        isRunning,
+        timeLeft,
+        remainingTime,
+        startTime,
+        workDuration,
+        restDuration
+      }));
+    }
+
+    function loadTimerState() {
+      const state = localStorage.getItem('pomodoroTimerState');
+      return state ? JSON.parse(state) : null;
+    }
+
     function startTimer() {
       if (isRunning) return;
       isRunning = true;
@@ -282,6 +299,7 @@
       workRange.disabled = true;
       restRange.disabled = true;
       startTime = Date.now();
+      saveTimerState();
 
       timerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -299,6 +317,7 @@
             timeLeft = restDuration;
             remainingTime = restDuration;
             updateDisplay();
+            saveTimerState();
             setTimeout(() => {
               workRange.disabled = false;
               restRange.disabled = false;
@@ -315,6 +334,7 @@
             restRange.disabled = false;
             rangesDisabled = false;
             updateDisplay();
+            saveTimerState();
           }
         }
       }, 1000);
@@ -327,6 +347,7 @@
         startBtn.disabled = false;
         timeLeft = remainingTime;
         pauseBtn.textContent = 'Ехало';
+        saveTimerState();
       } else {
         startTime = Date.now();
         startTimer();
@@ -345,6 +366,7 @@
       workRange.disabled = false;
       restRange.disabled = false;
       rangesDisabled = false;
+      localStorage.removeItem('pomodoroTimerState');
     }
 
     startBtn.addEventListener('click', () => {
@@ -380,14 +402,33 @@
     });
 
     window.addEventListener('load', () => {
-      workDuration = parseInt(localStorage.getItem('workDuration')) || 30 * 60;
-      restDuration = parseInt(localStorage.getItem('restDuration')) || 10 * 60;
-      workRange.value = workDuration / 60;
-      restRange.value = restDuration / 60;
-      workValue.textContent = workRange.value;
-      restValue.textContent = restRange.value;
-      timeLeft = isWork ? workDuration : restDuration;
-      remainingTime = timeLeft;
+      const savedState = loadTimerState();
+      if (savedState) {
+        isWork = savedState.isWork;
+        isRunning = savedState.isRunning;
+        timeLeft = savedState.timeLeft;
+        remainingTime = savedState.remainingTime;
+        workDuration = savedState.workDuration;
+        restDuration = savedState.restDuration;
+        workRange.value = workDuration / 60;
+        restRange.value = restDuration / 60;
+        workValue.textContent = workRange.value;
+        restValue.textContent = restRange.value;
+
+        if (isRunning) {
+          startTime = Date.now() - (timeLeft - remainingTime) * 1000;
+          startTimer();
+        }
+      } else {
+        workDuration = parseInt(localStorage.getItem('workDuration')) || 30 * 60;
+        restDuration = parseInt(localStorage.getItem('restDuration')) || 10 * 60;
+        workRange.value = workDuration / 60;
+        restRange.value = restDuration / 60;
+        workValue.textContent = workRange.value;
+        restValue.textContent = restRange.value;
+        timeLeft = isWork ? workDuration : restDuration;
+        remainingTime = timeLeft;
+      }
       updateDisplay();
     });
 
