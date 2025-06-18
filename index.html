@@ -127,26 +127,6 @@
     .small-btns button:hover {
       background: #e67e22;
     }
-    .input-group {
-      margin: 15px 0 10px 0;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .input-group label {
-      font-size: 0.95rem;
-      margin-bottom: 3px;
-      color: #555;
-    }
-    .input-group input {
-      padding: 7px 10px;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      width: 100%;
-      box-sizing: border-box;
-    }
     @media (max-width: 500px) {
       #timer { font-size: 2.5rem; }
       h1 { font-size: 1.3rem; }
@@ -280,7 +260,6 @@
       .then(data => console.log('Success:', data))
       .catch(error => {
         console.error('Error:', error);
-        alert('Произошла ошибка при отправке данных на сервер. Пожалуйста, попробуйте позже.');
       });
     }
 
@@ -380,7 +359,7 @@
       if (!rangesDisabled) {
         workValue.textContent = workRange.value;
         workDuration = workRange.value * 60;
-        if (isWork) {
+        if (!isRunning) {
           timeLeft = workDuration;
           remainingTime = workDuration;
           updateDisplay();
@@ -392,7 +371,7 @@
       if (!rangesDisabled) {
         restValue.textContent = restRange.value;
         restDuration = restRange.value * 60;
-        if (!isWork) {
+        if (!isRunning) {
           timeLeft = restDuration;
           remainingTime = restDuration;
           updateDisplay();
