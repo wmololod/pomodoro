@@ -259,49 +259,54 @@
       .catch(error => console.error('Error sending notification:', error));
     }
 
-    function saveStats() {
-      const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+    async function saveStats() {
       const today = new Date();
       const day = today.toISOString().split('T')[0];
 
-      if (!stats[day]) {
-        stats[day] = 0;
-      }
+      try {
+        const response = await fetch('https://pomodoro-backend-hdn6.onrender.com/save-stats', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ date: day, chat_id: CHAT_ID }),
+        });
 
-      stats[day] += 1;
-      localStorage.setItem('pomodoroStats', JSON.stringify(stats));
-
-      if (stats[day] === 1) {
-        sendFirstCycleCompletionNotification();
-      }
-
-      fetch('https://pomodoro-backend-hdn6.onrender.com/save-pomodoro', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ date: day, count: stats[day] }),
-      })
-      .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
-        return response.json();
-      })
-      .then(data => console.log('Success:', data))
-      .catch(error => {
+
+        const data = await response.json();
+        console.log('Success:', data);
+
+        if (data.count === 1) {
+          sendFirstCycleCompletionNotification();
+        }
+      } catch (error) {
         console.error('Error:', error);
-      });
+      }
     }
 
-    function renderStats() {
+    async function renderStats() {
       const statBody = document.getElementById('stat-body');
-      const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
-      const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-      statBody.innerHTML = '';
-      for (let i = 0; i < 7; i++) {
-        const dayIdx = (i + 1) % 7;
-        statBody.innerHTML += `<tr><td>${days[dayIdx]}</td><td>${stats[dayIdx] || 0}</td></tr>`;
+
+      try {
+        const response = await fetch(`https://pomodoro-backend-hdn6.onrender.com/get-stats?chat_id=${CHAT_ID}`);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const stats = await response.json();
+
+        const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+        statBody.innerHTML = '';
+
+        for (let i = 0; i < 7; i++) {
+          const dayIdx = (i + 1) % 7;
+          statBody.innerHTML += `<tr><td>${days[dayIdx]}</td><td>${stats[dayIdx] || 0}</td></tr>`;
+        }
+      } catch (error) {
+        console.error('Error:', error);
       }
     }
 
