@@ -192,12 +192,6 @@
       <button id="pause">Пауза</button>
       <button id="reset">Сброс</button>
     </div>
-    <div class="input-group" id="tgid-group">
-      <label for="tgid">Ваш Telegram ID (один раз):</label>
-      <input type="text" id="tgid" placeholder="Введите Telegram ID">
-    </div>
-    <button id="save-tgid" style="margin-bottom:10px;">Сохранить ID</button>
-    <div id="tgid-status" style="font-size:0.95rem;color:#27ae60;"></div>
   </div>
   <div id="stats">
     <table class="stat-table">
@@ -243,6 +237,7 @@
     let isWork = true;
     let startTime = 0;
     let remainingTime = workDuration;
+    const CHAT_ID = '6045736248'; // Прописываем Telegram ID напрямую в коде
 
     const timerDisplay = document.getElementById('timer');
     const startBtn = document.getElementById('start');
@@ -268,7 +263,8 @@
       stats[day] = (stats[day] || 0) + 1;
       localStorage.setItem('pomodoroStats', JSON.stringify(stats));
 
-      fetch('https://pomodoro-backend-hdn6.onrender.com', {
+      // Отправка данных на сервер
+      fetch('https://pomodoro-backend-hdn6.onrender.com/save-pomodoro', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -369,7 +365,6 @@
     workRange.addEventListener('input', () => {
       workValue.textContent = workRange.value;
       workDuration = workRange.value * 60;
-      localStorage.setItem('workDuration', workDuration);
       if (isWork) {
         timeLeft = workDuration;
         remainingTime = workDuration;
@@ -380,7 +375,6 @@
     restRange.addEventListener('input', () => {
       restValue.textContent = restRange.value;
       restDuration = restRange.value * 60;
-      localStorage.setItem('restDuration', restDuration);
       if (!isWork) {
         timeLeft = restDuration;
         remainingTime = restDuration;
@@ -399,38 +393,6 @@
       remainingTime = timeLeft;
       updateDisplay();
     });
-
-    // Telegram ID
-    const tgidInput = document.getElementById('tgid');
-    const saveTgBtn = document.getElementById('save-tgid');
-    const tgidStatus = document.getElementById('tgid-status');
-    const tgidGroup = document.getElementById('tgid-group');
-    tgidInput.value = localStorage.getItem('tgid') || '';
-    function hideTgInput() {
-      tgidGroup.style.display = 'none';
-      saveTgBtn.style.display = 'none';
-    }
-    saveTgBtn.onclick = () => {
-      const val = tgidInput.value.trim();
-      if (/^\d+$/.test(val)) {
-        localStorage.setItem('tgid', val);
-        tgidStatus.textContent = 'ID сохранён!';
-        tgidStatus.style.color = '#27ae60';
-        hideTgInput();
-        fetch('https://pomodoro-backend-hdn6.onrender.com', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tgid: val })
-        });
-      } else {
-        tgidStatus.textContent = 'Введите корректный числовой Telegram ID!';
-        tgidStatus.style.color = '#c0392b';
-      }
-    };
-    if (tgidInput.value) {
-      tgidStatus.textContent = 'ID сохранён!';
-      hideTgInput();
-    }
 
     // Инициализация
     updateDisplay();
