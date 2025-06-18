@@ -375,7 +375,7 @@ function pauseTimer() {
     const state = loadTimerState();
     if (state && state.paused) {
       // Сдвигаем старт на время паузы
-      let pauseDuration = Date.now() - state.pauseTime;
+      const pauseDuration = Date.now() - state.pauseTime;
       state.start += pauseDuration;
       state.paused = false;
       saveTimerState(state);
@@ -387,8 +387,8 @@ function pauseTimer() {
     clearInterval(timerInterval);
     isRunning = false;
     startBtn.disabled = false;
-    let state = loadTimerState();
-    let elapsed = Math.floor((Date.now() - state.start) / 1000);
+    const state = loadTimerState();
+    const elapsed = Math.floor((Date.now() - state.start) / 1000);
     timeLeft = state.duration - elapsed;
     saveTimerState({
       isWork,
@@ -401,6 +401,7 @@ function pauseTimer() {
     pauseBtn.textContent = 'Ехало';
   }
 }
+
 
     function resetTimer() {
       clearInterval(timerInterval);
