@@ -369,12 +369,18 @@ function saveStats() {
       }, 1000);
     }
 
+/**
+ * Pause or resume the timer.
+ * This function checks the current state of the timer and either pauses it or resumes it.
+ * It also updates the button text to reflect the current state.
+ */
+    
 function pauseTimer() {
   if (!isRunning) {
-    // Если таймер на паузе, возобновляем его
+    // Resume the timer if it is paused
     const state = loadTimerState();
     if (state && state.paused) {
-      // Сдвигаем старт на время паузы
+      // Adjust the start time by the pause duration
       const pauseDuration = Date.now() - state.pauseTime;
       state.start += pauseDuration;
       state.paused = false;
@@ -383,7 +389,7 @@ function pauseTimer() {
     startTimer();
     pauseBtn.textContent = 'Пауза';
   } else {
-    // Если таймер работает, ставим на паузу
+    // Pause the timer if it is running
     clearInterval(timerInterval);
     isRunning = false;
     startBtn.disabled = false;
@@ -401,6 +407,7 @@ function pauseTimer() {
     pauseBtn.textContent = 'Ехало';
   }
 }
+
 
 
     function resetTimer() {
