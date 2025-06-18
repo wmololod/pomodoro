@@ -237,12 +237,43 @@
       timerDisplay.textContent = `${minutes}:${seconds}`;
     }
 
+    function sendFirstCycleCompletionNotification() {
+      const today = new Date();
+      const currentTime = today.toLocaleTimeString();
+      const message = `Завершен первый цикл дня в ${currentTime}.`;
+
+      fetch('https://pomodoro-backend-hdn6.onrender.com/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chat_id: CHAT_ID, text: message }),
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => console.log('Notification sent:', data))
+      .catch(error => console.error('Error sending notification:', error));
+    }
+
     function saveStats() {
       const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
       const today = new Date();
       const day = today.toISOString().split('T')[0];
-      stats[day] = (stats[day] || 0) + 1;
+
+      if (!stats[day]) {
+        stats[day] = 0;
+      }
+
+      stats[day] += 1;
       localStorage.setItem('pomodoroStats', JSON.stringify(stats));
+
+      if (stats[day] === 1) {
+        sendFirstCycleCompletionNotification();
+      }
 
       fetch('https://pomodoro-backend-hdn6.onrender.com/save-pomodoro', {
         method: 'POST',
